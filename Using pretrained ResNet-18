@@ -1,0 +1,60 @@
+import torch
+from torchvision.models import resnet18, ResNet18_Weights
+from PIL import Image
+
+
+# --------------------------------------------------
+# 1. Load pretrained ResNet18
+# --------------------------------------------------
+
+weights = ResNet18_Weights.DEFAULT
+model = resnet18(weights=weights)
+
+# We are using the model for inference, not training
+model.eval()
+
+
+# --------------------------------------------------
+# 2. Load image
+# --------------------------------------------------
+
+image = Image.open("images/eksempel.png").convert("RGB")
+
+
+# --------------------------------------------------
+# 3. Preprocess image
+# --------------------------------------------------
+
+preprocess = weights.transforms()
+
+image_tensor = preprocess(image)
+
+# Add batch dimension
+image_tensor = image_tensor.unsqueeze(0)
+
+
+# --------------------------------------------------
+# 4. Run image through the model
+# --------------------------------------------------
+
+with torch.inference_mode():
+    output = model(image_tensor)
+
+
+# --------------------------------------------------
+# 5. Find predicted class
+# --------------------------------------------------
+
+probabilities = torch.softmax(output[0], dim=0)
+
+# Find the 5 highest probabilities
+top5_probabilities, top5_indices = torch.topk(probabilities, 5)
+
+
+print()
+print("Top 5 predictions:")
+
+for probability, class_id in zip(top5_probabilities, top5_indices):
+    class_name = weights.meta["categories"][class_id]
+    
+    print(f"{class_name:30} {probability.item() * 100:.2f}%")
